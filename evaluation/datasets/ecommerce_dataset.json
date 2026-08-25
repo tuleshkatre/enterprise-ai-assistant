@@ -1,0 +1,27 @@
+[
+  {
+    "question": "Within how many days can customers return products?",
+    "expected_answer": "30 days",
+    "expected_page": 1
+  },
+  {
+    "question": "How long does refund processing take?",
+    "expected_answer": "5 business days",
+    "expected_page": 1
+  },
+  {
+    "question": "What is the standard shipping duration?",
+    "expected_answer": "3-7 business days",
+    "expected_page": 1
+  },
+  {
+    "question": "How often are seller compliance reviews conducted?",
+    "expected_answer": "quarterly",
+    "expected_page": 1
+  },
+  {
+    "question": "How frequently are inventory audits performed?",
+    "expected_answer": "monthly",
+    "expected_page": 1
+  }
+]

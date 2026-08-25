@@ -1,0 +1,27 @@
+[
+  {
+    "question": "What must be completed before account activation?",
+    "expected_answer": "kyc verification",
+    "expected_page": 1
+  },
+  {
+    "question": "Who approves loans above INR 10 lakh?",
+    "expected_answer": "regional manager",
+    "expected_page": 1
+  },
+  {
+    "question": "In the banking policy, how long are transaction logs retained?",
+    "expected_answer": "10 years",
+    "expected_page": 1
+  },
+  {
+    "question": "Within how many days must credit card disputes be reported?",
+    "expected_answer": "30 days",
+    "expected_page": 1
+  },
+  {
+    "question": "Within how much time must fraud incidents be escalated?",
+    "expected_answer": "1 hour",
+    "expected_page": 1
+  }
+]

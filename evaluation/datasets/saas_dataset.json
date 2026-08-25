@@ -1,0 +1,27 @@
+[
+  {
+    "question": "How often are customer data backups performed?",
+    "expected_answer": "every 24 hours",
+    "expected_page": 1
+  },
+  {
+    "question": "How frequently do security reviews occur?",
+    "expected_answer": "every quarter",
+    "expected_page": 1
+  },
+  {
+    "question": "Who owns incident escalation?",
+    "expected_answer": "site reliability team",
+    "expected_page": 1
+  },
+  {
+    "question": "What must production deployments pass before release?",
+    "expected_answer": "CI/CD validation checks",
+    "expected_page": 1
+  },
+  {
+    "question": "How long are audit logs retained?",
+    "expected_answer": "1 year",
+    "expected_page": 1
+  }
+]

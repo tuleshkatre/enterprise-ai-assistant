@@ -1,0 +1,29 @@
+[
+  {
+    "question": "Who approves leave requests?",
+    "expected_answer": "Managers",
+    "expected_page": 1
+  },
+  {
+    "question": "How many annual paid leave days do employees receive?",
+    "expected_answer": "24",
+    "expected_page": 1
+  },
+  {
+    "question": "How many sick leave days are provided?",
+    "expected_answer": "12",
+    "expected_page": 1
+  },
+  {
+    "question": "How many emergency leave days are available?",
+    "expected_answer": "5",
+    "expected_page": 1
+  },
+  {
+    "question": "How many days in advance should leave requests be submitted?",
+    "expected_answer": "3 working days",
+    "expected_page": 1
+  }
+]
+
+

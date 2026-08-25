@@ -1,0 +1,27 @@
+[
+  {
+    "question": "How often are safety inspections conducted?",
+    "expected_answer": "every month",
+    "expected_page": 1
+  },
+  {
+    "question": "How frequently does equipment maintenance occur?",
+    "expected_answer": "90 days",
+    "expected_page": 1
+  },
+  {
+    "question": "Who approves production shutdowns?",
+    "expected_answer": "plant manager",
+    "expected_page": 1
+  },
+  {
+    "question": "When are quality checks required?",
+    "expected_answer": "before shipment",
+    "expected_page": 1
+  },
+  {
+    "question": "Within how many hours must incident reports be filed?",
+    "expected_answer": "24 hours",
+    "expected_page": 1
+  }
+]

@@ -1,0 +1,27 @@
+[
+  {
+    "question": "How long are patient records retained?",
+    "expected_answer": "7 years",
+    "expected_page": 1
+  },
+  {
+    "question": "Who must approve emergency surgeries?",
+    "expected_answer": "on-duty surgeon",
+    "expected_page": 1
+  },
+  {
+    "question": "How should prescription records be stored?",
+    "expected_answer": "digitally archived",
+    "expected_page": 1
+  },
+  {
+    "question": "Within how many days should insurance claims be submitted?",
+    "expected_answer": "60 days",
+    "expected_page": 1
+  },
+  {
+    "question": " In the healthcare policy, when must critical incidents be reported?",
+    "expected_answer": "immediately",
+    "expected_page": 1
+  }
+]
