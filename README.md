@@ -248,6 +248,66 @@ The application intentionally avoids opaque, monolithic chains. Retrieval,
 reranking, SQL safety, memory policy, source construction, and metrics remain
 explicit application code, making them independently testable and observable.
 
+## Chat Execution Modes
+
+Enterprise AI Assistant is one platform with two chat execution paths—not two
+separate projects. Both paths share authentication, tenant-scoped PostgreSQL and
+pgvector retrieval, document ingestion, LangChain model integrations, citations,
+and application security. They differ in orchestration scope.
+
+```mermaid
+flowchart TB
+    CLIENT[Authenticated client] --> API[FastAPI /api/v1]
+
+    API -->|POST /chat| CLASSIC[Classic document RAG]
+    API -->|POST /chat/stream| CLASSIC_STREAM[Classic streaming RAG]
+    API -->|POST /graph-chat| GRAPH[Agentic workflow]
+    API -->|POST /graph-chat/stream| GRAPH_STREAM[Agentic streaming workflow]
+
+    subgraph CLASSIC_PATH[Classic RAG execution path]
+        CLASSIC --> CR[Retrieve user-owned chunks]
+        CLASSIC_STREAM --> CR
+        CR --> CG[Custom prompt and ChatOllama]
+        CG --> COUT[Answer with citations]
+        CG --> CSSE[SSE answer tokens]
+    end
+
+    subgraph AGENTIC_PATH[Primary LangGraph execution path]
+        GRAPH --> CTX[Resolve conversation context]
+        GRAPH_STREAM --> CTX
+        CTX --> SUP[Supervisor routing]
+        SUP --> DOC[Document RAG]
+        SUP --> WEB[Web search]
+        SUP --> SQL[Safe SQL analytics]
+        SUP --> CALC[Calculator]
+        SUP --> CONV[Conversation]
+        SUP --> MEM[Memory]
+        DOC --> RESPONSE[Response layer]
+        WEB --> RESPONSE
+        SQL --> RESPONSE
+        CALC --> RESPONSE
+        CONV --> RESPONSE
+        MEM --> RESPONSE
+        RESPONSE --> GOUT[JSON answer or plain-text SSE]
+    end
+
+    STORE[(PostgreSQL + pgvector)] --> CR
+    STORE --> DOC
+    STORE --> SQL
+    STORE --> CONV
+    STORE --> MEM
+```
+
+| Mode | Endpoints | Orchestration | Best suited for |
+|---|---|---|---|
+| **Classic document RAG** | `/api/v1/chat`, `/api/v1/chat/stream` | Direct custom retrieval and generation using LangChain integrations | Stateless document Q&A and backward-compatible clients |
+| **Agentic workflow** | `/api/v1/graph-chat`, `/api/v1/graph-chat/stream` | Stateful LangGraph routing across specialized agents | Conversation-aware document, web, SQL, calculator, and memory requests |
+
+The graph endpoints are the primary advanced application path. The classic
+endpoints remain intentionally focused and preserve the original document-RAG
+API behavior. In both paths, retrieval and citation behavior is application-owned;
+the classic path is not an opaque `RetrievalQA` chain.
+
 ## Agentic Workflow
 
 The graph resolves context first, routes once through the supervisor, executes one specialized branch, and converges on a shared response layer. The streaming graph has the same route topology and replaces only the terminal response node.
