@@ -11,10 +11,10 @@ def create_user_and_login():
 
     client.post(
         "/register",
-        json={"username": f"user_{unique}", "email": email, "password": "test123"},
+        json={"username": f"user_{unique}", "email": email, "password": "test1234"},
     )
 
-    response = client.post("/login", json={"email": email, "password": "test123"})
+    response = client.post("/login", json={"email": email, "password": "test1234"})
 
     token = response.json()["access_token"]
 

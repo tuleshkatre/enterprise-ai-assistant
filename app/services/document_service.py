@@ -33,7 +33,9 @@ class DocumentService:
         if len(content) > settings.max_upload_size_bytes:
             raise HTTPException(status_code=400, detail="File size exceeds 10 MB")
 
-        path = f"{UPLOAD_DIR}/{user_id}_{uuid4()}_{file.filename}"
+        upload_directory = Path(UPLOAD_DIR)
+        upload_directory.mkdir(parents=True, exist_ok=True)
+        path = str(upload_directory / f"{user_id}_{uuid4()}_{file.filename}")
 
         with open(path, "wb") as f:
             f.write(content)
