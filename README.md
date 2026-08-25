@@ -8,6 +8,7 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.141-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)](https://postgresql.org)
 [![pgvector](https://img.shields.io/badge/pgvector-Vector_Search-4169E1)](https://github.com/pgvector/pgvector)
+[![LangChain](https://img.shields.io/badge/LangChain-RAG_Components-1C3C3C)](https://python.langchain.com/)
 [![LangGraph](https://img.shields.io/badge/LangGraph-Agent_Orchestration-1C3C3C)](https://langchain-ai.github.io/langgraph/)
 [![LangSmith](https://img.shields.io/badge/LangSmith-Observability-1C3C3C)](https://www.langchain.com/langsmith)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white)](https://docker.com)
@@ -51,6 +52,7 @@ What makes it more than a chatbot:
 | Capability | Implementation |
 |---|---|
 | Multi-agent architecture | Normal and streaming LangGraph state machines |
+| LangChain integration | PDF loading, recursive text splitting, Ollama chat-model integration, and typed tools |
 | Document intelligence | PDF extraction, numeric normalization, chunking, pgvector retrieval, cross-encoder reranking |
 | Web search agent | Freshness-sensitive search with URL provenance |
 | SQL analytics agent | Natural-language SQL, allowlisted relations, tenant CTEs, bounded SELECT-only execution |
@@ -194,6 +196,58 @@ sequenceDiagram
     Graph-->>Client: event: done
 ```
 
+## LangChain and LangGraph
+
+The project uses both technologies for different layers of the platform.
+LangChain supplies focused integration components for documents, models, and
+tools. LangGraph composes application agents into stateful normal and streaming
+workflows. LangGraph does not replace LangChain here; it orchestrates the
+LangChain-powered building blocks alongside application-owned services.
+
+```mermaid
+flowchart LR
+    subgraph LC[LangChain integration layer]
+        PDF[PyPDFLoader]
+        SPLIT[RecursiveCharacterTextSplitter]
+        MODEL[ChatOllama]
+        TOOLS[LangChain tool contracts]
+    end
+
+    subgraph APP[Application layer]
+        AGENTS[Specialized agents]
+        RAG[Retrieval and reranking]
+        MEMORY[Conversation and memory services]
+        SQL[Safe SQL analytics]
+    end
+
+    subgraph LG[LangGraph orchestration layer]
+        STATE[AgentState]
+        ROUTER[Conditional routing]
+        NODES[Node execution]
+        STREAM[StreamWriter]
+    end
+
+    PDF --> RAG
+    SPLIT --> RAG
+    MODEL --> AGENTS
+    TOOLS --> AGENTS
+    APP --> LG
+    LG --> RESPONSE[Normal or streaming response]
+```
+
+| Technology | Component | Actual responsibility | Code location |
+|---|---|---|---|
+| LangChain Community | `PyPDFLoader` | Load PDF pages with page metadata | `app/rag/loader.py` |
+| LangChain Text Splitters | `RecursiveCharacterTextSplitter` | Create overlapping retrieval chunks | `app/rag/splitter.py` |
+| LangChain Ollama | `ChatOllama` | Provide the shared chat-model adapter | `app/rag/generator.py` |
+| LangChain Core | `@tool` | Define calculator and web-search tool contracts | `app/tools/` |
+| LangGraph | `StateGraph` | Build normal and streaming workflow topology | `app/graph/workflow.py` |
+| LangGraph | `StreamWriter` | Emit true response tokens from the streaming node | `app/agents/response_stream_agent.py` |
+
+The application intentionally avoids opaque, monolithic chains. Retrieval,
+reranking, SQL safety, memory policy, source construction, and metrics remain
+explicit application code, making them independently testable and observable.
+
 ## Agentic Workflow
 
 The graph resolves context first, routes once through the supervisor, executes one specialized branch, and converges on a shared response layer. The streaming graph has the same route topology and replaces only the terminal response node.
@@ -214,6 +268,12 @@ The graph resolves context first, routes once through the supervisor, executes o
 | **Response Stream Agent** | Streams natural-language tokens without exposing internal JSON | same branch output | tokens, sources, final answer | tokens → sources → done |
 
 ## Retrieval Pipeline
+
+LangChain ecosystem components handle PDF loading (`PyPDFLoader`), recursive
+chunking (`RecursiveCharacterTextSplitter`), Ollama chat-model integration
+(`ChatOllama`), and tool declarations. LangGraph provides the stateful workflow,
+conditional routing, node execution, and streaming orchestration around those
+components.
 
 1. **Context-aware rewrite** converts only ambiguous follow-ups into standalone questions.
 2. **Embedding generation** uses `nomic-embed-text` and records embedding latency.
@@ -634,6 +694,7 @@ The API-first repository works without images. For a portfolio presentation, cap
 - **RAG:** ingestion, hybrid vector/lexical retrieval, reranking, grounding, citations.
 - **Agentic AI:** stateful orchestration, deterministic routing, specialized tools.
 - **LangGraph:** normal/stream graph parity and common state contracts.
+- **LangChain:** document loading, text splitting, model adapters, and reusable tool contracts.
 - **Memory systems:** recent history, summaries, typed long-term recall, privacy lifecycle.
 - **Safe SQL agents:** validation, tenant scoping, bounded read-only execution.
 - **Backend engineering:** FastAPI, service/repository boundaries, PostgreSQL, Alembic, JWT.
