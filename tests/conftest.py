@@ -47,13 +47,15 @@ def mock_external_llm_and_embedding_services(monkeypatch):
     limiter.reset()
 
     monkeypatch.setattr(
-        retrieval.ollama,
-        "embeddings",
-        lambda **_: {"embedding": [0.0] * 768},
+        retrieval,
+        "get_embedding",
+        lambda *_args, **_kwargs: [0.0] * 768,
     )
     monkeypatch.setattr(generator, "llm", _FakeLLM())
     monkeypatch.setattr(
-        embeddings.ollama, "embeddings", lambda **_: {"embedding": [0.0] * 768}
+        embeddings,
+        "create_embedding",
+        lambda *_args, **_kwargs: [0.0] * 768,
     )
     monkeypatch.setattr(context_resolver, "llm", _FakeLLM())
     monkeypatch.setattr(rewrite_agent, "llm", _FakeLLM())

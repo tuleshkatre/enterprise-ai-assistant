@@ -24,24 +24,34 @@ def system_diagnostics(context: Context) -> dict:
     except Exception:
         database_status = "unavailable"
 
-    ollama_status = "healthy"
-    try:
-        ollama.Client(host=settings.ollama_base_url, timeout=2.0).list()
-    except Exception:
-        ollama_status = "unavailable"
+    provider_status = "healthy"
+    if settings.ai_provider == "ollama":
+        try:
+            ollama.Client(host=settings.ollama_base_url, timeout=2.0).list()
+        except Exception:
+            provider_status = "unavailable"
 
     status = (
         "healthy"
-        if database_status == "healthy" and ollama_status == "healthy"
+        if database_status == "healthy" and provider_status == "healthy"
         else "degraded"
     )
     result = {
         "status": status,
         "database": database_status,
-        "ollama": ollama_status,
+        "ai_provider": settings.ai_provider,
+        "ai_provider_status": provider_status,
         "app_version": settings.app_version,
-        "llm_model": settings.llm_model,
-        "embedding_model": settings.embedding_model,
+        "llm_model": (
+            settings.gemini_llm_model
+            if settings.ai_provider == "gemini"
+            else settings.llm_model
+        ),
+        "embedding_model": (
+            settings.gemini_embedding_model
+            if settings.ai_provider == "gemini"
+            else settings.embedding_model
+        ),
         "langsmith_tracing": (
             os.getenv(
                 "LANGSMITH_TRACING_V2", os.getenv("LANGCHAIN_TRACING_V2", "false")

@@ -35,3 +35,20 @@ def test_llm_token_limits_are_configurable():
 
     assert settings.llm_context_window == 16384
     assert settings.llm_max_output_tokens == 1024
+
+
+def test_gemini_provider_requires_api_key():
+    with pytest.raises(ValidationError, match="GOOGLE_API_KEY"):
+        Settings(AI_PROVIDER="gemini", GOOGLE_API_KEY="")
+
+
+def test_gemini_provider_configuration():
+    settings = Settings(
+        AI_PROVIDER="gemini",
+        GOOGLE_API_KEY="test-key",
+        GEMINI_LLM_MODEL="gemini-3.6-flash",
+        GEMINI_EMBEDDING_MODEL="gemini-embedding-2",
+    )
+
+    assert settings.ai_provider == "gemini"
+    assert settings.embedding_dimension == 768

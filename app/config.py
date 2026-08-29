@@ -16,37 +16,63 @@ class Settings(BaseSettings):
         env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
 
+    # Application
     app_env: str = "development"
+    app_version: str = "1.0.0"
+    upload_dir: str = "uploads"
+    max_upload_size_bytes: int = 10 * 1024 * 1024
+    log_level: str = "INFO"
+
+    # Database
     database_url: str | None = Field(default=None, validation_alias="DATABASE_URL")
     db_host: str = "localhost"
     db_port: int = 5432
     db_name: str = "enterprise_ai"
     db_user: str = "postgres"
     db_password: str = "postgres"
+
+    # Authentication and security
     secret_key: str = "super-secret-key"
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 55
     refresh_token_expire_days: int = 7
-    app_version: str = "1.0.0"
+
+    # MCP
     mcp_issuer_url: str = "http://localhost:8000"
     mcp_resource_server_url: str = "http://localhost:8000/mcp"
+
+    # AI provider selection
+    ai_provider: str = "ollama"
+
+    # Local Ollama provider
     ollama_base_url: str = "http://host.docker.internal:11434"
     embedding_model: str = "nomic-embed-text"
     llm_model: str = "qwen3:4b-instruct"
+
+    # Hosted Gemini provider
+    google_api_key: str | None = None
+    gemini_llm_model: str = "gemini-3.6-flash"
+    gemini_embedding_model: str = "gemini-embedding-2"
+
+    # Shared model limits and vector schema
+    embedding_dimension: int = Field(default=768, ge=1)
     llm_context_window: int = Field(default=8192, ge=2048)
     llm_max_output_tokens: int = Field(default=512, ge=1)
-    upload_dir: str = "uploads"
-    max_upload_size_bytes: int = 10 * 1024 * 1024
+
+    # Retrieval and reranking
     retrieval_score_threshold: float = 0.55
     retrieval_top_k: int = 6
     rerank_top_k: int = 2
+
+    # Conversation and summary memory
     conversation_history_limit: int = 30
     conversation_summary_trigger_messages: int = 30
     conversation_summary_keep_recent_messages: int = 20
     conversation_summary_max_chars: int = 6000
     conversation_summary_batch_messages: int = 20
     conversation_summary_input_max_chars: int = 16000
-    log_level: str = "INFO"
+
+    # Observability
     metrics_enabled: bool = True
     langsmith_project: str = "enterprise-ai-assistant"
     langsmith_capture_content: bool = False
@@ -55,6 +81,15 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def validate_production_security(self) -> "Settings":
         """Fail startup when production is configured with unsafe defaults."""
+        self.ai_provider = self.ai_provider.casefold().strip()
+        if self.ai_provider not in {"ollama", "gemini"}:
+            raise ValueError("AI_PROVIDER must be either 'ollama' or 'gemini'")
+        if self.ai_provider == "gemini" and not self.google_api_key:
+            raise ValueError("GOOGLE_API_KEY is required when AI_PROVIDER=gemini")
+        if self.embedding_dimension != 768:
+            raise ValueError(
+                "EMBEDDING_DIMENSION must remain 768 for the current pgvector schema"
+            )
         if self.llm_max_output_tokens >= self.llm_context_window:
             raise ValueError(
                 "LLM_MAX_OUTPUT_TOKENS must be smaller than LLM_CONTEXT_WINDOW"

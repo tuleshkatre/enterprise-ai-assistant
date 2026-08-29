@@ -2,11 +2,12 @@ import logging
 import re
 from time import perf_counter
 
-import ollama
 from sqlalchemy import text
 
-from app.config import EMBEDDING_MODEL, settings
+from app.config import settings
 from app.observability.langsmith import add_trace_metadata, trace_agent
+from app.rag.embeddings import get_embedding
+from app.rag.providers import RETRIEVAL_QUERY
 
 logger = logging.getLogger(__name__)
 
@@ -98,9 +99,7 @@ def retrieve(
         top_k = settings.retrieval_top_k
 
     embedding_started_at = perf_counter()
-    query_embedding = ollama.embeddings(model=EMBEDDING_MODEL, prompt=query)[
-        "embedding"
-    ]
+    query_embedding = get_embedding(query, task_type=RETRIEVAL_QUERY)
     embedding_ms = (perf_counter() - embedding_started_at) * 1000
 
     retrieval_started_at = perf_counter()

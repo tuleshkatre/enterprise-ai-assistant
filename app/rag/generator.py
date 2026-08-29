@@ -1,16 +1,7 @@
-from langchain_ollama import ChatOllama
-
-from app.config import settings
 from app.observability.langsmith import trace_agent
+from app.rag.providers import create_chat_model
 
-llm = ChatOllama(
-    model=settings.llm_model,
-    temperature=0,
-    reasoning=False,
-    num_predict=settings.llm_max_output_tokens,
-    num_ctx=settings.llm_context_window,
-    keep_alive="30m",
-)
+llm = create_chat_model()
 
 
 @trace_agent("generate_answer", tags=["legacy", "generation"])
