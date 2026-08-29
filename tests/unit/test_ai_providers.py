@@ -24,9 +24,7 @@ def test_gemini_embedding_uses_query_task_and_fixed_dimension(monkeypatch):
     class _Models:
         def embed_content(self, **kwargs):
             captured.update(kwargs)
-            return SimpleNamespace(
-                embeddings=[SimpleNamespace(values=[0.1] * 768)]
-            )
+            return SimpleNamespace(embeddings=[SimpleNamespace(values=[0.1] * 768)])
 
     monkeypatch.setattr(providers, "settings", _settings("gemini"))
     monkeypatch.setattr(
