@@ -35,6 +35,14 @@ def test_trace_content_can_be_enabled_for_controlled_debugging(monkeypatch):
     assert payload["content"] == "policy text"
 
 
+def test_trace_payload_accepts_non_mapping_outputs():
+    class Result:
+        pass
+
+    assert observability.sanitize_trace_payload(None) == {"output": None}
+    assert observability.sanitize_trace_payload(Result()) == {"output": "<Result>"}
+
+
 def test_trace_metadata_is_attached_to_current_span(monkeypatch):
     run = _Run()
     monkeypatch.setattr(observability, "get_current_run_tree", lambda: run)

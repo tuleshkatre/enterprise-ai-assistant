@@ -74,8 +74,13 @@ def _safe_value(key: str, value: Any) -> Any:
     return f"<{type(value).__name__}>"
 
 
-def sanitize_trace_payload(payload: dict[str, Any]) -> dict[str, Any]:
-    return {str(key): _safe_value(str(key), value) for key, value in payload.items()}
+def sanitize_trace_payload(payload: Any) -> dict[str, Any]:
+    """Return a safe mapping for LangSmith, regardless of the traced return type."""
+    if isinstance(payload, dict):
+        return {
+            str(key): _safe_value(str(key), value) for key, value in payload.items()
+        }
+    return {"output": _safe_value("output", payload)}
 
 
 def trace_agent(
