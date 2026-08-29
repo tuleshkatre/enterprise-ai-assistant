@@ -5,6 +5,7 @@ from time import perf_counter
 from app.agents.context_resolver_agent import build_bounded_memory_context
 from app.observability.langsmith import add_trace_metadata
 from app.rag.generator import llm
+from app.rag.providers import extract_text_content
 
 logger = logging.getLogger(__name__)
 
@@ -60,8 +61,9 @@ def rewrite_agent(state):
         }
 
     started_at = perf_counter()
-    rewritten_query = llm.invoke(
-        f"""
+    rewritten_query = extract_text_content(
+        llm.invoke(
+            f"""
             Rewrite an ambiguous conversational follow-up into one standalone
             query for enterprise search and retrieval.
 
@@ -80,7 +82,8 @@ def rewrite_agent(state):
             Current User Query:
             {query}
             """
-    ).content.strip()
+        ).content
+    ).strip()
     rewrite_ms = (perf_counter() - started_at) * 1000
     logger.info(
         "rag_timing rewrite_ms=%.2f rewritten=%s",

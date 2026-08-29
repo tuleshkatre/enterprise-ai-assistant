@@ -16,6 +16,20 @@ RETRIEVAL_DOCUMENT = "RETRIEVAL_DOCUMENT"
 RETRIEVAL_QUERY = "RETRIEVAL_QUERY"
 
 
+def extract_text_content(content: Any) -> str:
+    """Normalize LangChain string or structured content blocks to plain text."""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, (list, tuple)):
+        return "".join(extract_text_content(block) for block in content)
+    if isinstance(content, dict):
+        text = content.get("text")
+        return text if isinstance(text, str) else ""
+
+    text = getattr(content, "text", None)
+    return text if isinstance(text, str) else ""
+
+
 def create_chat_model() -> BaseChatModel:
     """Create the configured chat model without changing caller semantics."""
     if settings.ai_provider == "gemini":

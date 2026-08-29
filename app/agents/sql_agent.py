@@ -10,6 +10,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from app.observability.langsmith import add_trace_metadata
 from app.rag.generator import llm
+from app.rag.providers import extract_text_content
 
 logger = logging.getLogger(__name__)
 
@@ -215,7 +216,9 @@ def sql_agent(state: dict[str, Any]) -> dict[str, Any]:
     generated_sql = known_safe_query(query)
     generation_mode = "deterministic" if generated_sql is not None else "llm"
     if generated_sql is None:
-        generated_sql = llm.invoke(build_sql_generation_prompt(query)).content
+        generated_sql = extract_text_content(
+            llm.invoke(build_sql_generation_prompt(query)).content
+        )
     sql_generation_ms = (perf_counter() - generation_started_at) * 1000
 
     try:

@@ -11,6 +11,7 @@ from app.observability.langsmith import (
     trace_stream,
 )
 from app.rag.generator import llm
+from app.rag.providers import extract_text_content
 from app.repositories.conversation_repository import (
     ConversationRepository,
 )
@@ -115,8 +116,9 @@ class GraphChatService:
         history = memory_context.recent_messages
 
         if len(history) == 0:
-            title = llm.invoke(
-                f"""
+            title = extract_text_content(
+                llm.invoke(
+                    f"""
                     Generate a short conversation title.
 
                     Maximum 5 words.
@@ -126,7 +128,8 @@ class GraphChatService:
 
                     Return only the title.
                     """
-            ).content.strip()
+                ).content
+            ).strip()
 
             self.conversation_repository.update_conversation_title(conversation, title)
 
@@ -208,8 +211,9 @@ class GraphChatService:
         memory_context = self.memory_service.load_context(conversation_id)
         history = memory_context.recent_messages
         if len(history) == 0:
-            title = llm.invoke(
-                f"""
+            title = extract_text_content(
+                llm.invoke(
+                    f"""
                     Generate a short conversation title.
 
                     Maximum 5 words.
@@ -219,7 +223,8 @@ class GraphChatService:
 
                     Return only the title.
                     """
-            ).content.strip()
+                ).content
+            ).strip()
             self.conversation_repository.update_conversation_title(conversation, title)
 
         history_text = "".join(

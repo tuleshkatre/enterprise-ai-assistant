@@ -15,6 +15,7 @@ from app.agents.prompt_builder import (
 from app.observability.langsmith import add_trace_metadata
 from app.rag.generator import llm
 from app.rag.numeric_fidelity import correct_unsupported_negative_quantities
+from app.rag.providers import extract_text_content
 
 MAX_SOURCES = 3
 logger = logging.getLogger(__name__)
@@ -129,7 +130,7 @@ def handle_document_response(
     answer_started_at = perf_counter()
     prompt = build_document_prompt(documents, query)
     response = llm.invoke(prompt)
-    parsed = _parse_generation(response.content)
+    parsed = _parse_generation(extract_text_content(response.content))
     if parsed is None:
         answer_llm_ms = (perf_counter() - answer_started_at) * 1000
         return _result(NO_ANSWER, [], answer_llm_ms)
@@ -140,7 +141,7 @@ def handle_document_response(
         logger.warning("rag_generation incomplete_answer_retry=true")
         retry_prompt = build_document_retry_prompt(documents, query)
         retry_response = llm.invoke(retry_prompt)
-        retry_parsed = _parse_generation(retry_response.content)
+        retry_parsed = _parse_generation(extract_text_content(retry_response.content))
         if retry_parsed is None:
             answer_llm_ms = (perf_counter() - answer_started_at) * 1000
             return _result(NO_ANSWER, [], answer_llm_ms)
@@ -176,7 +177,7 @@ def handle_web_response(
     answer_started_at = perf_counter()
     prompt = build_web_prompt(web_results, _effective_query(state))
     response = llm.invoke(prompt)
-    answer = response.content.strip()
+    answer = extract_text_content(response.content).strip()
     try:
         payload = json.loads(answer)
         if isinstance(payload, dict) and isinstance(payload.get("answer"), str):
@@ -227,7 +228,7 @@ def handle_sql_response(state: dict[str, Any]) -> dict[str, Any]:
         "rag_timing answer_llm_ms=%.2f document_count=0",
         answer_llm_ms,
     )
-    answer = response.content.strip()
+    answer = extract_text_content(response.content).strip()
     if (
         "no matching data" in answer.casefold()
         or "no data was found" in answer.casefold()
@@ -254,7 +255,7 @@ def handle_conversation_response(state: dict[str, Any]) -> dict[str, Any]:
         )
     )
     answer_llm_ms = (perf_counter() - answer_started_at) * 1000
-    answer = response.content.strip()
+    answer = extract_text_content(response.content).strip()
     logger.info("rag_timing answer_llm_ms=%.2f document_count=0", answer_llm_ms)
     return _result(answer, [], answer_llm_ms)
 

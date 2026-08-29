@@ -9,6 +9,7 @@ from app.config import settings
 from app.db.database import SessionLocal
 from app.observability.langsmith import add_trace_metadata, trace_agent
 from app.rag.generator import llm
+from app.rag.providers import extract_text_content
 from app.repositories.conversation_summary_repository import (
     ConversationSummaryRepository,
 )
@@ -98,13 +99,15 @@ class ConversationMemoryService:
                     :summary_input_message_count
                 ]
                 message_text = "".join(message_lines)
-                generated = llm.invoke(
-                    build_conversation_summary_prompt(
-                        summary,
-                        message_text,
-                        settings.conversation_summary_max_chars,
-                    )
-                ).content.strip()
+                generated = extract_text_content(
+                    llm.invoke(
+                        build_conversation_summary_prompt(
+                            summary,
+                            message_text,
+                            settings.conversation_summary_max_chars,
+                        )
+                    ).content
+                ).strip()
                 if not generated:
                     raise ValueError("Conversation summary was empty")
                 if len(generated) > settings.conversation_summary_max_chars:

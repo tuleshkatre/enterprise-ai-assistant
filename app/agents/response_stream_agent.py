@@ -22,6 +22,7 @@ from app.agents.response_agent import (
 from app.observability.langsmith import add_trace_metadata
 from app.rag.generator import llm
 from app.rag.numeric_fidelity import stream_corrected_numeric_chunks
+from app.rag.providers import extract_text_content
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +39,7 @@ def _stream_prompt(
     raw_chunks = (
         content
         for chunk in llm.stream(prompt)
-        if (content := getattr(chunk, "content", ""))
+        if (content := extract_text_content(getattr(chunk, "content", "")))
     )
     output_chunks = (
         stream_corrected_numeric_chunks(raw_chunks, documents)
@@ -143,7 +144,7 @@ def _handle_sql_response(state: dict[str, Any], writer: StreamWriter) -> dict[st
     first_token_ms = None
     chunk_count = 0
     for chunk in llm.stream(prompt):
-        content = getattr(chunk, "content", "")
+        content = extract_text_content(getattr(chunk, "content", ""))
         if not content:
             continue
         if first_token_ms is None:

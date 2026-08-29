@@ -1,5 +1,5 @@
 from app.observability.langsmith import trace_agent
-from app.rag.providers import create_chat_model
+from app.rag.providers import create_chat_model, extract_text_content
 
 llm = create_chat_model()
 
@@ -39,7 +39,7 @@ def generate_answer(query: str, docs: list):
 
     response = llm.invoke(prompt)
 
-    answer = response.content.strip()
+    answer = extract_text_content(response.content).strip()
 
     if "could not find" in answer.lower() or "not found" in answer.lower():
         return "I could not find the answer in the provided documents."
@@ -77,6 +77,7 @@ def generate_answer_stream(query: str, docs: list):
     """
 
     for chunk in llm.stream(prompt):
-        if chunk.content:
-            print(chunk.content, end="", flush=True)
-            yield chunk.content
+        content = extract_text_content(chunk.content)
+        if content:
+            print(content, end="", flush=True)
+            yield content

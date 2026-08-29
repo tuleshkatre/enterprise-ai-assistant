@@ -6,6 +6,7 @@ from typing import Any
 
 from app.agents.memory_policy import normalize_recall_key, parse_memory_command
 from app.rag.generator import llm
+from app.rag.providers import extract_text_content
 
 logger = logging.getLogger(__name__)
 
@@ -245,7 +246,9 @@ def context_resolver_agent(state: dict[str, Any]) -> dict[str, Any]:
 
     started_at = perf_counter()
     response = llm.invoke(build_context_resolution_prompt(query, memory_context))
-    resolved_query, context_route = _parse_resolution(response.content, query)
+    resolved_query, context_route = _parse_resolution(
+        extract_text_content(response.content), query
+    )
     elapsed_ms = (perf_counter() - started_at) * 1000
     logger.info(
         "context_timing context_resolution_ms=%.2f resolved=%s route=%s",

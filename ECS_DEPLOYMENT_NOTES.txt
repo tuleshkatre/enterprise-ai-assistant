@@ -1,0 +1,322 @@
+ENTERPRISE AI ASSISTANT - AWS ECS DEPLOYMENT NOTES
+==================================================
+
+Date: 30 August 2026
+Region: ap-south-1 (Mumbai)
+
+
+1. DEPLOYMENT ARCHITECTURE
+--------------------------
+
+GitHub Actions CI/CD
+    -> Docker image build
+    -> Amazon ECR
+    -> Amazon ECS Fargate service
+    -> Amazon RDS PostgreSQL with pgvector
+    -> AWS Secrets Manager
+    -> Amazon CloudWatch Logs
+
+Current API testing URL:
+http://<ECS-TASK-PUBLIC-IP>:8000/docs
+
+Important: An ECS task public IP can change whenever the task is replaced.
+Production traffic should use an Application Load Balancer, domain, and HTTPS.
+
+
+2. COMPLETED DEPLOYMENT STEPS
+-----------------------------
+
+[DONE] AWS budget/cost awareness configured.
+[DONE] Docker image built and pushed to Amazon ECR.
+[DONE] RDS PostgreSQL instance created.
+[DONE] pgvector extension created through Alembic migrations.
+[DONE] Application and RDS credentials stored in Secrets Manager.
+[DONE] ECS cluster created: enterprise-ai-cluster.
+[DONE] Task execution role configured: ecsTaskExecutionRole.
+[DONE] ECS task definition created: enterprise-ai-api.
+[DONE] ECS service created: enterprise-ai-service.
+[DONE] Fargate task running and container health check passing.
+[DONE] Database migrations executed successfully using a one-off ECS task.
+[DONE] API health endpoint and Swagger documentation tested.
+[DONE] CI workflow configured and passing.
+[DONE] CD workflow added at .github/workflows/cd.yml.
+[PENDING VERIFICATION] CD rerun after adding ECS permissions to the
+enterprise-ai-deployer IAM user.
+
+
+3. CI WORKFLOW
+--------------
+
+File: .github/workflows/ci.yml
+
+The CI workflow performs:
+
+1. Repository checkout.
+2. Python 3.12 setup.
+3. Dependency installation.
+4. Python compilation check.
+5. PostgreSQL/pgvector test service startup.
+6. Alembic migration execution.
+7. Ruff lint check.
+8. Ruff formatting check.
+9. Pytest execution with an 80% coverage gate.
+10. Coverage artifact upload.
+11. Docker Compose validation.
+12. Docker image build validation.
+
+
+4. CD WORKFLOW
+--------------
+
+File: .github/workflows/cd.yml
+
+The CD workflow starts only after CI succeeds on main, or through a manual
+workflow dispatch. It performs:
+
+1. Resolves the exact commit tested by CI.
+2. Authenticates to AWS using GitHub repository secrets.
+3. Logs in to ECR.
+4. Builds the Docker image.
+5. Tags the image using the immutable Git commit SHA.
+6. Pushes the image to ECR.
+7. Copies the current ECS task definition.
+8. Replaces the api container image URI.
+9. Registers a new task-definition revision.
+10. Runs `alembic upgrade head` as a one-off Fargate task.
+11. Stops deployment if migration fails.
+12. Updates the ECS service.
+13. Waits until the ECS service becomes stable.
+
+Required GitHub repository secrets:
+
+- AWS_ACCESS_KEY_ID
+- AWS_SECRET_ACCESS_KEY
+
+Never commit access-key CSV files, .env files, API keys, passwords, or secret
+values to Git.
+
+
+5. AWS RESOURCE NAMES
+---------------------
+
+AWS Region:             ap-south-1
+ECR repository:         enterprise-ai-assistant
+ECS cluster:            enterprise-ai-cluster
+ECS service:            enterprise-ai-service
+Task definition family: enterprise-ai-api
+Container name:         api
+Container port:         8000
+Execution role:         ecsTaskExecutionRole
+CloudWatch log group:   /ecs/enterprise-ai-api
+Application secret:     prod/enterprise-ai-assistant/app
+
+
+6. IMPORTANT ISSUES AND FIXES
+-----------------------------
+
+Issue: ECS could not retrieve a JSON key from Secrets Manager.
+Cause: The task definition used an incorrect secret ARN/key suffix or requested
+a key that did not exist in the selected secret.
+Fix: Use the application secret ARN for SECRET_KEY and GOOGLE_API_KEY, and the
+RDS-managed master credentials secret for database username/password.
+
+Issue: "unexpected ARN format with parameters".
+Cause: The JSON key was appended directly to the random ARN suffix.
+Fix: Use the ECS secret valueFrom format:
+<secret-arn>:<json-key>::
+
+Issue: ECS task stopped after running migrations.
+Cause: A migration task used `alembic upgrade head` as its command. A successful
+migration exits normally with exit code 0.
+Fix: Treat it as a one-off task, not as the continuously running API service.
+
+Issue: API worked internally but public IP timed out.
+Cause: Port 8000 was not reachable through the ECS task security group.
+Fix: Verify public IP assignment, subnet route `0.0.0.0/0 -> Internet Gateway`,
+and the security-group inbound rule for TCP port 8000.
+
+Issue: LangSmith warned that ConversationMemoryContext/None had no `.items()`.
+Cause: The trace output sanitizer assumed every traced result was a dictionary.
+Fix: Make the sanitizer accept mappings, objects, and None, and return a safe
+mapping for LangSmith.
+
+Issue: GitHub CD failed at DescribeTaskDefinition with AccessDeniedException.
+Cause: The enterprise-ai-deployer IAM user had ECR permissions but lacked ECS
+deployment permissions.
+Fix: Add scoped permissions for DescribeTaskDefinition, RegisterTaskDefinition,
+DescribeServices, UpdateService, RunTask, DescribeTasks, and iam:PassRole.
+
+
+7. REMAINING PRODUCTION WORK
+----------------------------
+
+[ ] Confirm that the rerun CD workflow completes successfully.
+[ ] Confirm that the ECS service uses the new task-definition revision.
+[ ] Test /api/v1/health and /docs after automatic deployment.
+[ ] Create an Application Load Balancer (ALB).
+[ ] Create a target group using the API health-check path.
+[ ] Place ECS tasks in private subnets where practical.
+[ ] Allow ECS port 8000 only from the ALB security group.
+[ ] Remove public `0.0.0.0/0` access to port 8000.
+[ ] Configure a domain in Route 53 or another DNS provider.
+[ ] Request an ACM TLS certificate.
+[ ] Add an HTTPS listener on port 443 and redirect HTTP to HTTPS.
+[ ] Replace placeholder MCP URLs with real HTTPS endpoints.
+[ ] Rotate any credential that was ever exposed in a screenshot or log.
+[ ] Prefer GitHub OIDC and a short-lived AWS role over long-lived access keys.
+[ ] Add CloudWatch alarms for unhealthy tasks and application errors.
+[ ] Configure backup retention, log retention, and cost alerts.
+[ ] Add deployment smoke tests and an automated rollback policy.
+
+
+8. USEFUL COMMANDS
+------------------
+
+Run formatting:
+python -m ruff format app tests evaluation alembic
+
+Check formatting:
+python -m ruff format --check app tests evaluation alembic
+
+Run lint:
+python -m ruff check app tests evaluation alembic
+
+Run tests:
+python -m pytest tests --cov=app --cov-fail-under=80
+
+Run migrations:
+python -m alembic upgrade head
+
+Build image locally:
+docker build -f docker/Dockerfile -t enterprise-ai-assistant:local .
+
+Check Git state:
+git status
+
+Push changes:
+git push origin main
+
+
+9. ECS INTERVIEW QUESTIONS AND SHORT ANSWERS
+--------------------------------------------
+
+Q1. What is Amazon ECS?
+A. ECS is AWS's managed container orchestration service. It schedules and
+manages containers using either Fargate or EC2 capacity.
+
+Q2. What is the difference between ECS and EKS?
+A. ECS uses AWS-native container orchestration. EKS provides managed
+Kubernetes. ECS is generally simpler; EKS is useful when Kubernetes APIs and
+ecosystem portability are required.
+
+Q3. What is an ECS cluster?
+A. It is a logical grouping of services, tasks, and compute capacity.
+
+Q4. What is an ECS task definition?
+A. It is a versioned blueprint describing containers, images, CPU, memory,
+ports, environment variables, secrets, roles, logging, and health checks.
+
+Q5. What is an ECS task?
+A. A task is a running or stopped instance of a task definition.
+
+Q6. What is an ECS service?
+A. A service maintains the desired number of long-running tasks and performs
+deployments, replacement, health monitoring, and load-balancer integration.
+
+Q7. What is the difference between Fargate and ECS on EC2?
+A. With Fargate, AWS manages the underlying compute. With EC2 launch type, the
+team manages EC2 instances, capacity, scaling, and patching.
+
+Q8. What is the difference between task role and task execution role?
+A. The execution role is used by the ECS agent to pull images, retrieve secrets,
+and write logs. The task role is used by application code inside the container
+to call AWS APIs.
+
+Q9. How does ECS pull a private ECR image?
+A. The ECS agent uses the task execution role to obtain ECR authorization and
+download image layers.
+
+Q10. How are secrets supplied to containers?
+A. The task definition references Secrets Manager or SSM Parameter Store. ECS
+retrieves values using the execution role and injects them at task startup.
+
+Q11. Why use an immutable image tag such as the Git SHA?
+A. It identifies the exact source revision, prevents ambiguity from mutable
+tags, and makes rollback and auditing easier.
+
+Q12. What happens during an ECS rolling deployment?
+A. ECS starts tasks using the new task definition, waits for them to become
+healthy, and then drains/stops old tasks according to minimum and maximum
+healthy-percent settings.
+
+Q13. What is the ECS deployment circuit breaker?
+A. It detects a deployment that cannot reach a steady state, marks it failed,
+and can automatically roll back to the last successful deployment.
+
+Q14. Container health check versus ALB health check?
+A. A container health check runs inside the task. An ALB health check tests
+whether the target is reachable and serving requests through the network path.
+
+Q15. How would you debug a stopped ECS task?
+A. Inspect stoppedReason, container reason and exit code, service events,
+CloudWatch logs, task-definition image/secrets, IAM permissions, health checks,
+security groups, routes, and available CPU/memory.
+
+Q16. Why can an ECS task have a public IP but still be unreachable?
+A. Its security group, NACL, route table, application bind address, or listening
+port may block traffic. The application must normally bind to 0.0.0.0.
+
+Q17. How should ECS connect securely to RDS?
+A. Keep both in the same VPC, preferably use private subnets, allow PostgreSQL
+only from the ECS security group, encrypt connections, and store credentials in
+Secrets Manager.
+
+Q18. How should database migrations be handled in CD?
+A. Run migrations as a separate one-off task, wait for exit code 0, and deploy
+the application only after migration succeeds. Migrations should be backward
+compatible for zero-downtime deployment.
+
+Q19. How do you roll back an ECS deployment?
+A. Update the service to a previous task-definition revision or let the circuit
+breaker roll back automatically. Immutable image tags make this reliable.
+
+Q20. Why use an ALB instead of a task public IP?
+A. Task IPs are ephemeral. An ALB provides a stable endpoint, health checks,
+TLS termination, routing, scaling support, and controlled security groups.
+
+Q21. How does GitHub Actions deploy to ECS?
+A. CI tests the commit. CD authenticates to AWS, builds and pushes an image,
+registers a task-definition revision, runs migrations, updates the service, and
+waits for stability.
+
+Q22. Why is iam:PassRole required during deployment?
+A. The deployment principal must be allowed to pass the task execution/task
+roles referenced by the new task definition to ECS tasks.
+
+Q23. What should be monitored in production?
+A. Running versus desired tasks, deployment failures, CPU/memory, ALB target
+health, HTTP error and latency rates, application exceptions, RDS metrics, and
+CloudWatch log alarms.
+
+Q24. How would you improve this deployment for production?
+A. Use private tasks behind an HTTPS ALB, GitHub OIDC, least-privilege IAM,
+autoscaling, alarms, backups, secret rotation, vulnerability scanning, smoke
+tests, and automatic rollback.
+
+
+10. FINAL VERIFICATION CHECKLIST
+--------------------------------
+
+[ ] GitHub CI is green.
+[ ] GitHub CD is green.
+[ ] New image SHA exists in ECR.
+[ ] ECS service points to the new task-definition revision.
+[ ] Desired task count equals running task count.
+[ ] Container health is healthy.
+[ ] Migration task exited with code 0.
+[ ] /api/v1/health returns HTTP 200.
+[ ] /docs loads successfully.
+[ ] CloudWatch contains no startup exception.
+[ ] No credentials are committed to Git.
+[ ] Public port 8000 is removed after ALB/HTTPS setup.
+

@@ -61,3 +61,15 @@ def test_ollama_embedding_behavior_is_preserved(monkeypatch):
 
     assert len(vector) == 768
     assert captured == {"model": "nomic-embed-text", "prompt": "leave policy"}
+
+
+def test_extract_text_content_supports_strings_and_structured_blocks():
+    content = [
+        {"type": "text", "text": "Enterprise "},
+        {"type": "thinking", "thinking": "hidden"},
+        {"type": "text", "text": "answer"},
+    ]
+
+    assert providers.extract_text_content("plain text") == "plain text"
+    assert providers.extract_text_content(content) == "Enterprise answer"
+    assert providers.extract_text_content(None) == ""
